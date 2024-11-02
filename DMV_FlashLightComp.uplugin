@@ -1,0 +1,24 @@
+{
+  "FileVersion": 3,
+  "Version": 1,
+  "VersionName": "1.0",
+  "FriendlyName": "DMV_FlashLightComp",
+  "Description": "",
+  "Category": "Other",
+  "CreatedBy": "DuarteMV",
+  "CreatedByURL": "",
+  "DocsURL": "",
+  "MarketplaceURL": "",
+  "SupportURL": "",
+  "CanContainContent": true,
+  "IsBetaVersion": true,
+  "IsExperimentalVersion": false,
+  "Installed": false,
+  "Modules": [
+    {
+      "Name": "DMV_FlashLightComp",
+      "Type": "Runtime",
+      "LoadingPhase": "Default"
+    }
+  ]
+}
