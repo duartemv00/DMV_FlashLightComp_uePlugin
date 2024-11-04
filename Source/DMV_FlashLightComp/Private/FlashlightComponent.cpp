@@ -13,11 +13,11 @@ UFlashlightComponent::UFlashlightComponent()
 	PrimaryComponentTick.bCanEverTick = false;
 }
 
-
 void UFlashlightComponent::BeginPlay()
 {
 	Super::BeginPlay();
 	ConstructFlashlight();
+	ConfigureFlashlight();
 }
 
 bool UFlashlightComponent::ConstructFlashlight()
@@ -28,43 +28,77 @@ bool UFlashlightComponent::ConstructFlashlight()
 
 bool UFlashlightComponent::AddSpringArm()
 {
-	SpringArm = GetOwner()->AddComponentByClass(USpringArmComponent::StaticClass(), true, FTransform(), true);
-
-	if (SpringArm) SpringArm->RegisterComponent();
+	UActorComponent* SpringArmCreation = GetOwner()->AddComponentByClass(
+		USpringArmComponent::StaticClass(), true, FTransform(), true);
+	if (SpringArmCreation) SpringArmCreation->RegisterComponent();
 	else UE_LOG(LogTemp, Error, TEXT("SpringArm not created"));
+	
+	SpringArm = Cast<USpringArmComponent>(SpringArmCreation);
 
-	// Cast<USceneComponent>(SpringArm)->SetupAttachment(
-	// 	Cast<ACharacter>(GetOwner())->GetCapsuleComponent());
-	Cast<USpringArmComponent>(SpringArm)->TargetArmLength = 0.0f;
-	Cast<USpringArmComponent>(SpringArm)->bUsePawnControlRotation = true;
-	Cast<USpringArmComponent>(SpringArm)->SetWorldLocation(FVector(0.0f, 20.0f, 40.0f));
-	Cast<USpringArmComponent>(SpringArm)->bEnableCameraRotationLag = true;
+	// Attach SpringArm to Owner
+	SpringArm->SetWorldLocation(GetOwner()->GetActorLocation());
+	SpringArm->AttachToComponent(
+		Cast<USceneComponent>(GetOwner()->GetRootComponent()), FAttachmentTransformRules::KeepRelativeTransform, NAME_None);
 
-	Cast<USceneComponent>(SpringArm)->AttachToComponent(
-		Cast<USceneComponent>(GetOwner()->GetRootComponent()), FAttachmentTransformRules::KeepRelativeTransform);
+	SpringArm->TargetArmLength = 0.0f;
+	SpringArm->bUsePawnControlRotation = true;
+	SpringArm->bEnableCameraRotationLag = true;
+	
 	return true;
 }
 
 bool UFlashlightComponent::AddSpotLight()
 {
-	SpotLight = GetOwner()->AddComponentByClass(USpotLightComponent::StaticClass(), true, FTransform(), true);
-	if (SpotLight) SpotLight->RegisterComponent();
+	UActorComponent* SpotLightCreation = GetOwner()->AddComponentByClass(
+		USpotLightComponent::StaticClass(), true, FTransform(), true);
+	if (SpotLightCreation) SpotLightCreation->RegisterComponent();
 	else UE_LOG(LogTemp, Error, TEXT("SpotLight not created"));
-	Cast<USceneComponent>(SpotLight)->AttachToComponent(Cast<USceneComponent>(SpringArm), FAttachmentTransformRules::KeepRelativeTransform);
-	if(MaskMaterial)
-	{
-		Cast<USpotLightComponent>(SpotLight)->SetLightFunctionMaterial(MaskMaterial);
-	}
+	
+	SpotLight = Cast<USpotLightComponent>(SpotLightCreation);
+	
+	// Attach SpotLight to SpringArm
+	SpotLight->SetWorldLocation(GetOwner()->GetActorLocation());
+	SpotLight->AttachToComponent(SpringArm, FAttachmentTransformRules::KeepRelativeTransform, NAME_None);
+	
 	return true;
+}
+
+void UFlashlightComponent::SetFlashlightProperties(
+	UMaterialInstance* InMaterial,
+		bool bInStartOn,
+		bool bInBlock,
+		float InLagSpeed,
+		FVector InLocation,
+		float InIntensity)
+{
+	FlashlightLocation = InLocation;
+	FlashlightLagSpeed = InLagSpeed;
+	FlashlightIntensity = InIntensity;
+	FlashlightMaskMaterial = InMaterial;
+	bBlockFlashlight = bInBlock;
+	bFlashLightOn = bInStartOn;
+}
+
+void UFlashlightComponent::ConfigureFlashlight()
+{
+	SpringArm->SetWorldLocation(FlashlightLocation);
+	SpringArm->CameraRotationLagSpeed = FlashlightLagSpeed;
+	SpotLight->SetIntensity(FlashlightIntensity);
+	if(FlashlightMaskMaterial) SpotLight->SetLightFunctionMaterial(FlashlightMaskMaterial);
+	if(bFlashLightOn) SpringArm->SetVisibility(true, true);
+	else SpringArm->SetVisibility(false, true);
 }
 
 void UFlashlightComponent::ToggleFlashlight()
 {
-	if (bFlashLightOn) {
-		Cast<USceneComponent>(SpringArm)->SetVisibility(false, true);
-		bFlashLightOn = false;
-	} else {
-		Cast<USceneComponent>(SpringArm)->SetVisibility(true, true);
-		bFlashLightOn = true;
+	if(!bBlockFlashlight) // Check if flashlight is blocked
+	{
+		if (bFlashLightOn) {
+			SpringArm->SetVisibility(false, true);
+			bFlashLightOn = false;
+		} else {
+			SpringArm->SetVisibility(true, true);
+			bFlashLightOn = true;
+		}
 	}
 }
